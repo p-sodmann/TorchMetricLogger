@@ -1,9 +1,10 @@
 from collections import defaultdict
 
 class TorchMetricLogger:
-    def __init__(self, log_function):
+    def __init__(self, log_function=None):
         """
-        
+        log_function should accept a dictionary of values per epoch and log them somewhere
+        like to tensorboard, weights&biases or neptune
         """
         
         # defaultdict, that stores our metrics sorted by a key
