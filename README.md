@@ -46,7 +46,7 @@ for epoch in range(100):
             
             loss = criterion(output_y, sample["y"])
             
-            dice_metric(partial=True, 
+            metric_logger(partial=True, 
                 valid_dice=(sample["y"], output_y, ["Class_one", "Class_two", "Class_three", "Class_four"], binary_accuracy), 
                 valid_loss = ([loss])
             )
