@@ -32,7 +32,7 @@ for epoch in range(100):
         optimizer.step()
                 
         metric_logger(partial=True, 
-                    train_dice=(sample["y"], output_y, ["Class_one", "Class_two", "Class_three", "Class_four"], binary_accuracy), 
+                    train_bin_accuracy=(sample["y"], output_y, ["Class_one", "Class_two", "Class_three", "Class_four"], binary_accuracy), 
                     train_loss = ([loss])
                    )
     
@@ -47,7 +47,7 @@ for epoch in range(100):
             loss = criterion(output_y, sample["y"])
             
             metric_logger(partial=True, 
-                valid_dice=(sample["y"], output_y, ["Class_one", "Class_two", "Class_three", "Class_four"], binary_accuracy), 
+                valid_bin_accuracy=(sample["y"], output_y, ["Class_one", "Class_two", "Class_three", "Class_four"], binary_accuracy), 
                 valid_loss = ([loss])
             )
             
