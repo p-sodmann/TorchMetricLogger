@@ -1,7 +1,7 @@
 # TorchMetricLogger
 Small class to log metrics during training
 
-```
+``` python
 from torchmetriclogger import TorchMetricLogger
 
 # create a new log instance, you can also provide a log_function, 
