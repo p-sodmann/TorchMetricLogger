@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 print(f"Found packages: {find_packages()}")
 
 setup(
-    name='TorchMetricsLogger',
+    name='TorchMetricLogger',
     packages=find_packages(),
     description='Useful to log metrics while training a pytorch model',
     version='0.1',

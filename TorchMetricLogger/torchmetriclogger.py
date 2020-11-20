@@ -1,4 +1,6 @@
 from collections import defaultdict
+import numpy as np
+
 
 class TorchMetricLogger:
     def __init__(self, log_function=None):
