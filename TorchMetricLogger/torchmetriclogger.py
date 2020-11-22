@@ -33,7 +33,7 @@ class TorchMetricLogger:
             
         # then for each class add its metric as well
         for index, class_name in enumerate(class_names):
-            class_metric = float(metric_function(gold_label[index], prediction[index]))
+            class_metric = float(metric_function(gold_label[:, index], prediction[:, index]))
         
             self._add(group_name + "_" + class_name, class_metric, partial)
             
