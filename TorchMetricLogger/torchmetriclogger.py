@@ -1,6 +1,19 @@
 from collections import defaultdict
 import numpy as np
+from dataclasses import dataclass
+from typing import Any
 
+@dataclass
+class TmlMetric:
+    gold_labels: Any
+    predictions: Any
+    function: Any = None
+    class_names: Any = None
+    weights: Any = None
+    
+@dataclass
+class TmlLoss:
+    loss: Any
 
 class TorchMetricLogger:
     def __init__(self, log_function=None):
@@ -23,21 +36,22 @@ class TorchMetricLogger:
         else:
             self.partial[group_name].append(metric)
         
-    def calc_metric(self, group_name, gold_label, prediction, class_names, metric_function, partial=False):
+    def calc_metric(self, group_name, metric:TmlMetric, partial=False):
         """
         calculates the metric from self.metric_function and stores it in the history
         """
         # first add the mean total metric
-        metric = float(metric_function(gold_label, prediction))
-        self._add(group_name, metric, partial)
-            
-        # then for each class add its metric as well
-        for index, class_name in enumerate(class_names):
-            class_metric = float(metric_function(gold_label[:, index], prediction[:, index]))
+        metric_value = float(metric.function(metric.gold_labels, metric.predictions))
+        self._add(group_name, metric_value, partial)
         
-            self._add(group_name + "_" + class_name, class_metric, partial)
+        if metric.class_names is not None:
+            # then for each class add its metric as well
+            for index, class_name in enumerate(metric.class_names):
+                class_metric = float(metric.function(metric.gold_labels[:, index], metric.predictions[:, index]))
+        
+                self._add(group_name + "_" + class_name, class_metric, partial)
             
-    def add_loss(self, group_name, loss, partial=False):
+    def add_loss(self, group_name, loss:TmlLoss, partial=False):
         # in case this is a torch tensor, recast as float
         loss = float(loss)
         self._add(group_name, loss, partial)
@@ -49,28 +63,18 @@ class TorchMetricLogger:
         
         example metric(train=(10, 10), test=(9, 10))
         """
-        for group_name, values in label_prediction.items():
-            if len(values) == 1:
-                loss = values[0]
-                self.add_loss(group_name, loss, partial)
-                
-            elif len(values) == 4:
-                gold_label = values[0]
-                prediction = values[1]
-                class_names = values[2]
-                function_metric = values[3]
-                
+        for group_name, bench in label_prediction.items():
+            if isinstance(bench, TmlLoss):
+                self.add_loss(group_name, bench.loss, partial)
+            
+            elif isinstance(bench, TmlMetric):
                 self.calc_metric(
                     group_name, 
-                    gold_label, 
-                    prediction, 
-                    class_names, 
-                    function_metric, 
+                    bench,
                     partial
-                )
-            
+                )   
             else:
-                raise Exception("Input Error", f"Metrics Class only accepts either 1 value or 4 values, you passed {len(values)}.")
+                raise Exception("Input Error", f"please pass the data in the Dataclass Loss or Metric, you passed {type(bench)}.")
             
     def batch_end(self):
         for group_name, metric in self.partial.items():           
