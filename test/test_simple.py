@@ -1,12 +1,15 @@
 from TorchMetricLogger import TorchMetricLogger as TML
-from TorchMetricLogger import TmlMetric, TmlLoss
+from TorchMetricLogger import TmlMetric, TmlLoss, TmlMetricFunction
 import torch
 
-def binary_accuracy(label, prediction):
-    prediction = (prediction > 0.5).double()
-    tp = (label == prediction).double()
-    return torch.mean(tp)
+class TMLBinaryAccuracy(TmlMetricFunction):
+    def __init__(self):
+        super().__init__()
+        
+    def calculate(self, gold_labels, predictions):
+        return (gold_labels > 0.5) == (predictions > 0.5)
 
+binary_accuracy = TMLBinaryAccuracy()
 
 def test_bin_accuracy():
     """
@@ -15,22 +18,21 @@ def test_bin_accuracy():
 
     labels = torch.ones(100)
     predictions = torch.zeros(100)
-    accuracy = binary_accuracy(labels, predictions)
-    
-    assert accuracy == 0
+    weights = torch.ones(100)
+    metrics_weights = binary_accuracy(labels, predictions, weights)
+    assert metrics_weights[0]/metrics_weights[1] == 0
 
     labels = torch.ones(100)
-    predictions = torch.ones(100)
-    accuracy = binary_accuracy(labels, predictions)
-    
-    assert accuracy == 1
+    predictions = torch.ones(100) 
+    metrics_weights = binary_accuracy(labels, predictions, weights)
+    assert metrics_weights[0]/metrics_weights[1] == 1
 
     labels = torch.ones(100)
 
     half_positive = torch.zeros(100)
     half_positive[50:] = 1
-
-    assert binary_accuracy(labels, half_positive) == 0.5
+    metrics_weights = binary_accuracy(labels, half_positive, weights)
+    assert metrics_weights[0]/metrics_weights[1] == 0.5
 
 def test_tml_bin_accuracy_batches():
     """
@@ -91,7 +93,40 @@ def test_tml_bin_accuracy_epoch():
 
     tml.batch_end()
     
-    assert tml.history["train_bin_accuracy"] == [0.5] 
+    assert tml.history["train_bin_accuracy"] == [0.5]
+
+
+def test_tml_bin_accuracy_epoch_weights():
+    """
+    We now simulate one epoch with 3 batches.
+    The batches should get averaged mean([0,1,0.5]) == 0.5
+    """
+    labels = torch.ones(100)
+    predictions = torch.zeros(100)
+    weights = torch.zeros(100)
+    
+    tml = TML()
+
+    tml(partial=True, 
+        train_bin_accuracy=TmlMetric(labels, predictions, binary_accuracy, weights=weights)
+    )
+
+    predictions = torch.ones(100)
+    weights = torch.ones(100)
+
+    tml(partial=True, 
+        train_bin_accuracy=TmlMetric(labels, predictions, binary_accuracy, weights=weights)
+    )
+
+    half_positive = torch.zeros(100)
+    half_positive[50:] = 1
+    tml(partial=True, 
+        train_bin_accuracy=TmlMetric(labels, half_positive, binary_accuracy, weights=half_positive)
+    )
+
+    tml.batch_end()
+    
+    assert tml.history["train_bin_accuracy"] == [1] 
 
 
 def test_tml_bin_accuracy_batch_different_groups():

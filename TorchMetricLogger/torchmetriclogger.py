@@ -2,6 +2,7 @@ from collections import defaultdict
 import numpy as np
 from dataclasses import dataclass
 from typing import Any
+import torch
 
 @dataclass
 class TmlMetric:
@@ -14,6 +15,11 @@ class TmlMetric:
 @dataclass
 class TmlLoss:
     loss: Any
+
+@dataclass
+class TmlMetricLog:
+    metric: Any
+    weight: Any
 
 class TorchMetricLogger:
     def __init__(self, log_function=None):
@@ -40,14 +46,20 @@ class TorchMetricLogger:
         """
         calculates the metric from self.metric_function and stores it in the history
         """
-        # first add the mean total metric
-        metric_value = float(metric.function(metric.gold_labels, metric.predictions))
-        self._add(group_name, metric_value, partial)
+        assert metric.gold_labels.shape == metric.predictions.shape
+
+        # if we dont set explicit weights, we set them to ones
+        if metric.weights is None:
+            metric.weights = torch.ones(metric.gold_labels.shape)
+
+        metric_log = metric.function(metric.gold_labels, metric.predictions, metric.weights)
+
+        self._add(group_name, metric_log, partial)
         
         if metric.class_names is not None:
             # then for each class add its metric as well
             for index, class_name in enumerate(metric.class_names):
-                class_metric = float(metric.function(metric.gold_labels[:, index], metric.predictions[:, index]))
+                class_metric = metric.function(metric.gold_labels[:, index], metric.predictions[:, index], metric.weights[:, index])
         
                 self._add(group_name + "_" + class_name, class_metric, partial)
             
@@ -79,8 +91,9 @@ class TorchMetricLogger:
     def batch_end(self):
         for group_name, metric in self.partial.items():           
             # calculate the mean per entry in the metric
-            metric = np.mean(metric, axis=0)
+            metric_weight = np.mean(metric, axis=0)
 
+            metric = metric_weight[0] / metric_weight[1]
             self.history[group_name].append(metric)
         
         self.partial = defaultdict(list)
