@@ -20,6 +20,8 @@ class TmlMetricFunction():
             metric.predictions = metric.predictions.detach().numpy()
         
         self.partial.append(self.calculate(metric))
+
+        return self
     
     
     def reduce(self):
@@ -39,9 +41,8 @@ class TmlMetricFunction():
         return [((metric.gold_labels > 0.5) == (metric.predictions > 0.5)), metric.weights]
     
     def reduction_function(self):
-        return self.partial[0][0].sum() / self.partial[0][1].sum()
+        return self.partial[:, 0].sum() / self.partial[:, 1].sum()
 
-    
         
 class TMLBinaryAccuracy(TmlMetricFunction):
     def __init__(self):
@@ -51,6 +52,8 @@ class TMLBinaryAccuracy(TmlMetricFunction):
 # testing axes at the moment
 class TMLDiceCoefficient(TmlMetricFunction):   
     def __call__(self, metric):
+        assert metric.predictions is not None
+        
         if metric.weights is None:
             metric.weights = np.ones(len(metric.gold_labels))
             
@@ -65,6 +68,25 @@ class TMLDiceCoefficient(TmlMetricFunction):
         intersection = np.sum(metric.gold_labels * metric.predictions, axis=axis)
         score = (2. * intersection + smooth) / (np.sum(metric.gold_labels, axis=axis) + np.sum(metric.predictions, axis=axis) + smooth)
         return [score, metric.weights]
+
+    def reduction_function(self):
+        score = np.average(self.partial[:, 0], weights=self.partial[:, 1]) 
+        return score
+
+
+# take the (weighted) mean, usefull for loss functions
+class TMLMean(TmlMetricFunction):
+    def __call__(self, metric):
+        assert metric.gold_labels is None
+        metric.predictions = np.array(metric.predictions)
+
+        if metric.weights is None:
+            metric.weights = np.ones(metric.predictions.size)
+            
+        super().__call__(metric)
+        
+    def calculate(self, metric):
+        return [metric.predictions, metric.weights]
 
     def reduction_function(self):
         score = np.average(self.partial[:, 0], weights=self.partial[:, 1]) 

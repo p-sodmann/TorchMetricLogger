@@ -11,11 +11,6 @@ class TmlMetric:
     metric_class: Any = None
     class_names: Any = None
     weights: Any = None
-    
-@dataclass
-class TmlLoss:
-    loss: Any   
-
 
 class TorchMetricLogger():
     def __init__(self):
@@ -27,22 +22,31 @@ class TorchMetricLogger():
         else:
             self.metrics[group_name] = metric.metric_class()
             self.metrics[group_name](metric)
+
+    def add_loss(self, group_name, metric):
+        if group_name in self.metrics:
+            self.metrics[group_name](metric)
+        else:
+            self.metrics[group_name] = metric.metric_class()
+            self.metrics[group_name](metric)
     
-    def log(self, **label_prediction):
+    def __call__(self, **label_prediction):
         for group_name, metric in label_prediction.items():
-            if isinstance(metric, TmlLoss):
-                self.add_loss(
-                    group_name,
-                    metric
-                )
+            # first do a score over all classes
+            self.add_metric(
+                group_name,
+                metric
+            )   
             
-            elif isinstance(metric, TmlMetric):
-                self.add_metric(
-                    group_name,
-                    metric
-                )   
-            else:
-                raise Exception("Input Error", f"please pass the data in the Dataclass Loss or Metric, you passed {type(bench)}.")
+            # then add a score for each individual class
+            if metric.class_names != None:
+                for class_name in metric.class_names:
+                    self.add_metric(
+                        group_name + "_" + class_name,
+                        metric
+                    )   
+
     
     def on_batch_end(self):
-        pass
+        for metric_object in self.metrics.values():
+            metric_object.reduce() 
