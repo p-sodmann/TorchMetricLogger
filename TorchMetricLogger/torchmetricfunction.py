@@ -1,35 +1,71 @@
+import torch
+import numpy as np
+
 class TmlMetricFunction():
     def __init__(self):
-        pass
+        self.partial = []
+        self.history = []
     
-    def __call__(self, gold_labels, predicitions, weights):
-        sum_weights = weights.sum()
+    def __call__(self, metric):
+        if torch.is_tensor(metric.weights):
+            metric.weights = metric.weights.detach().numpy()
+            
+        if metric.weights is None:
+            metric.weights = np.ones(metric.gold_labels.shape)
         
-        metrics = self.calculate(gold_labels, predicitions)
-        sum_metrics = (metrics * weights).sum()
-
-        return [float(sum_metrics), float(sum_weights)]
+        if torch.is_tensor(metric.gold_labels):
+            metric.gold_labels = metric.gold_labels.detach().numpy()
+            
+        if torch.is_tensor(metric.predictions):
+            metric.predictions = metric.predictions.detach().numpy()
+        
+        self.partial.append(self.calculate(metric))
     
-    def calculate(self, gold_labels, predictions):
-        return (gold_labels > 0.5) == (predictions > 0.5)
+    
+    def reduce(self):
+        self.partial = np.array(self.partial)
+        
+        # calculate the weighted mean
+        score = self.reduction_function()
+        
+        # reset the partial, really important to erase the year 2020 ;)
+        self.partial = []
 
-# Example
+        self.history.append(score)
+        
+        return score
+    
+    def calculate(self, metric):
+        return [((metric.gold_labels > 0.5) == (metric.predictions > 0.5)), metric.weights]
+    
+    def reduction_function(self):
+        return self.partial[0][0].sum() / self.partial[0][1].sum()
+
+    
+        
 class TMLBinaryAccuracy(TmlMetricFunction):
     def __init__(self):
-        super().__init__()
-        
-    def calculate(self, gold_labels, predictions):
-        return (gold_labels > 0.5) == (predictions > 0.5)
+        super().__init__() 
+    
 
 # testing axes at the moment
-class TMLDiceCoefficient(TmlMetricFunction):
-    def __init__(self, axis=-1):
-        super().__init__()
-        self.axis=axis
+class TMLDiceCoefficient(TmlMetricFunction):   
+    def __call__(self, metric):
+        if metric.weights is None:
+            metric.weights = np.ones(len(metric.gold_labels))
+            
+        super().__call__(metric)
         
-    def calculate(self, gold_labels, predictions):
+    def calculate(self, metric):
         smooth = 1
         
-        intersection = torch.sum(gold_labels * predictions, axis=self.axis)
-        score = (2. * intersection + smooth) / (torch.sum(gold_labels, axis=self.axis) + torch.sum(predictions, axis=self.axis) + smooth)
+        # somehow numpy only likes tuples here
+        axis = tuple(np.arange(1, metric.gold_labels.ndim, dtype=np.int))
+        
+        intersection = np.sum(metric.gold_labels * metric.predictions, axis=axis)
+        score = (2. * intersection + smooth) / (np.sum(metric.gold_labels, axis=axis) + np.sum(metric.predictions, axis=axis) + smooth)
+        return [score, metric.weights]
+
+    def reduction_function(self):
+        score = np.average(self.partial[:, 0], weights=self.partial[:, 1]) 
         return score
