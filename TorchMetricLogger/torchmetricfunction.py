@@ -30,7 +30,7 @@ class TmlMetricFunction():
         # calculate the weighted mean
         score = self.reduction_function()
         
-        # reset the partial, really important to erase the year 2020 ;)
+        # reset the partial
         self.partial = []
 
         self.history.append(score)
@@ -91,3 +91,24 @@ class TMLMean(TmlMetricFunction):
     def reduction_function(self):
         score = np.average(self.partial[:, 0], weights=self.partial[:, 1]) 
         return score
+
+class TMLF1(TmlMetricFunction):
+    def __call__(self, metric):
+        if metric.weights is None:
+            metric.weights = np.ones(metric.predictions.size)
+    
+        super().__call__(metric)
+        
+    def calculate(self, metric):
+        tp = np.sum(((metric.gold_labels >= 0.5) * (metric.predictions >= 0.5)) * metric.weights)
+        fp = np.sum(((metric.gold_labels < 0.5) * (metric.predictions >= 0.5)) * metric.weights)
+        fn = np.sum(((metric.gold_labels >= 0.5) * (metric.predictions < 0.5)) * metric.weights)
+        
+        return [tp, fp, fn]
+
+    def reduction_function(self):
+        tp = self.partial[:, 0]
+        fp = self.partial[:, 1]
+        fn = self.partial[:, 2]
+
+        return np.mean(tp / (tp + (fp + fn)/2) )

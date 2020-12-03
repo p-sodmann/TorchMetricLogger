@@ -44,8 +44,7 @@ class TorchMetricLogger():
                     self.add_metric(
                         group_name + "_" + class_name,
                         metric
-                    )   
-
+                    )
     
     def on_batch_end(self):
         for metric_object in self.metrics.values():
