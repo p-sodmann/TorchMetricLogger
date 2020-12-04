@@ -13,8 +13,9 @@ class TmlMetric:
     weights: Any = None
 
 class TorchMetricLogger():
-    def __init__(self):
+    def __init__(self, log_function = None):
         self.metrics = {}
+        self.log_function = log_function
         
     def add_metric(self, group_name, metric):
         if group_name in self.metrics:
@@ -49,3 +50,7 @@ class TorchMetricLogger():
     def on_batch_end(self):
         for metric_object in self.metrics.values():
             metric_object.reduce() 
+
+        if self.log_function is not None:
+            log_output = {name: metric.history[-1] for name, metric in self.metrics.items()}
+            self.log_function(log_output)

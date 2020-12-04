@@ -1,2 +1,2 @@
 from TorchMetricLogger.torchmetriclogger import TorchMetricLogger, TmlMetric
-from TorchMetricLogger.torchmetricfunction import TmlMetricFunction, TMLBinaryAccuracy, TMLDiceCoefficient, TMLMean
+from TorchMetricLogger.torchmetricfunction import TmlMetricFunction, TMLBinaryAccuracy, TMLDiceCoefficient, TMLMean, TMLF1

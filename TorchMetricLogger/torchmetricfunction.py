@@ -8,16 +8,16 @@ class TmlMetricFunction():
     
     def __call__(self, metric):
         if torch.is_tensor(metric.weights):
-            metric.weights = metric.weights.detach().numpy()
+            metric.weights = metric.weights.cpu().detach().numpy()
             
         if metric.weights is None:
             metric.weights = np.ones(metric.gold_labels.shape)
         
         if torch.is_tensor(metric.gold_labels):
-            metric.gold_labels = metric.gold_labels.detach().numpy()
+            metric.gold_labels = metric.gold_labels.cpu().detach().numpy()
             
         if torch.is_tensor(metric.predictions):
-            metric.predictions = metric.predictions.detach().numpy()
+            metric.predictions = metric.predictions.cpu().detach().numpy()
         
         self.partial.append(self.calculate(metric))
 
