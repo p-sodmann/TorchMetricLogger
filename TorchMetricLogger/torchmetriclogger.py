@@ -14,28 +14,26 @@ class TmlMetric:
     class_names: Any = None
     weights: Any = None
 
-class TorchMetricLogger():
-    def __init__(self, log_function = None):
+
+class TorchMetricLogger:
+    def __init__(self, log_function=None):
         self.metrics = {}
         self.log_function = log_function
-        
+
     def add_metric(self, group_name, metric):
         if group_name in self.metrics:
             self.metrics[group_name](metric)
         else:
             self.metrics[group_name] = metric.metric_class()
             self.metrics[group_name](metric)
-    
+
     def __call__(self, **label_prediction):
         for group_name, metric in label_prediction.items():
             # first do a score over all classes
 
             original_weights = metric.weights
 
-            self.add_metric(
-                group_name,
-                metric
-            )   
+            self.add_metric(group_name, metric)
 
             # then add a score for each individual class
             if metric.class_names != None:
@@ -50,28 +48,33 @@ class TorchMetricLogger():
                         predictions = metric.predictions[:, index]
                     else:
                         predictions = None
-                    
+
                     if original_weights is not None:
                         if original_weights.ndim > 1:
                             weights = original_weights[:, index]
-                            
+
                         else:
                             weights = original_weights
-                            
+
                     else:
                         weights = None
 
-                    sub_metric = TmlMetric(gold_labels, predictions, metric.metric_class, weights=weights)
-
-                    self.add_metric(
-                        group_name + "_" + class_name,
-                        sub_metric
+                    sub_metric = TmlMetric(
+                        gold_labels, predictions, metric.metric_class, weights=weights
                     )
-    
+
+                    self.add_metric(group_name + "_" + class_name, sub_metric)
+
     def on_batch_end(self):
         for metric_object in self.metrics.values():
-            metric_object.reduce() 
+            metric_object.reduce()
+
+        log_output = {
+            name: {key: values[-1] for key, values in metric.history.items()}
+            for name, metric in self.metrics.items()
+        }
 
         if self.log_function is not None:
-            log_output = {name: metric.history[-1] for name, metric in self.metrics.items()}
             self.log_function(log_output)
+
+        return log_output
