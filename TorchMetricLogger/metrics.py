@@ -8,8 +8,8 @@ from typing import Any
 
 @dataclass
 class TmlMetric:
-    gold_labels: Any = None
     predictions: Any = None
+    gold_labels: Any = None
     values: Any = None
     metric_class: Any = None
     class_names: Any = None
