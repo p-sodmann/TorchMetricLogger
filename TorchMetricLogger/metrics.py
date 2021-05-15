@@ -110,8 +110,9 @@ class TMLBinaryAccuracy(TmlMetric):
         assert self.predictions is not None
 
     def calculate(self, metric):
+        dims = np.arange(1, metric.gold_labels.ndim)
 
-        tp = (metric.gold_labels > 0.5) * (metric.predictions > 0.5)
+        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
         tn = (metric.gold_labels < 0.5) * (metric.predictions < 0.5)
 
         return {
@@ -127,13 +128,15 @@ class TMLDice(TmlMetric):
         assert self.predictions is not None
 
     def calculate(self, metric):
-        tp = (metric.gold_labels > 0.5) * (metric.predictions > 0.5)
-        fp = (metric.gold_labels > 0.5) * (metric.predictions < 0.5)
-        fn = (metric.gold_labels < 0.5) * (metric.predictions > 0.5)
+        dims = np.arange(1, metric.gold_labels.ndim)
+
+        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
+        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
+        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
 
         return {
             # only count positives
             # correct for length of answers
-            "metric": 2*tp / np.clip(2*tp + fp + fn, 1, None),
+            "metric": (2*tp) / np.clip(2*tp + fp + fn, 1, None),
             "weights": metric.weights,
         }
