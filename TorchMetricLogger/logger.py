@@ -23,21 +23,9 @@ class TorchMetricLogger:
             # then add a score for each individual class
             if metric.class_names != None:
                 for index, class_name in enumerate(metric.class_names):
-
-                    if metric.gold_labels is not None:
-                        gold_labels = metric.gold_labels[:, index]
-                    else:
-                        gold_labels = None
-
-                    if metric.predictions is not None:
-                        predictions = metric.predictions[:, index]
-                    else:
-                        predictions = None
-
-                    if metric.values is not None:
-                        values = metric.values[:, index]
-                    else:
-                        values = None
+                    gold_labels = None if metric.gold_labels is None else metric.gold_labels[:, index]
+                    predictions = None if metric.predictions is None else metric.predictions[:, index]
+                    values = None if metric.values is None else metric.values[:, index]
 
                     if original_weights is not None:
                         if original_weights.ndim > 1:

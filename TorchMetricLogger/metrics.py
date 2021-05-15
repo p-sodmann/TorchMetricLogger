@@ -33,23 +33,13 @@ class TmlMetric:
         if torch.is_tensor(metric.weights):
             metric.weights = metric.weights.detach().cpu().numpy()
 
-        if metric.weights is None:
-            if metric.gold_labels is not None:
-                metric.weights = np.ones(metric.gold_labels.shape)
-            elif metric.predictions is not None:
-                metric.weights = np.ones(metric.predictions.shape)
-            elif metric.values is not None:
-                metric.weights = np.ones(metric.values.shape)
-            else:
-                raise Exception("need Gold Label, Prediciton or Value to do anything.")
-
         if torch.is_tensor(metric.gold_labels):
             metric.gold_labels = metric.gold_labels.detach().cpu().numpy()
-        
+
         if torch.is_tensor(metric.values):
             metric.values = metric.values.detach().cpu().numpy()
 
-        if torch.is_tensor(self.predictions):
+        if torch.is_tensor(metric.predictions):
             metric.predictions = metric.predictions.detach().cpu().numpy()
 
         return metric
@@ -72,17 +62,33 @@ class TmlMetric:
         # make sure, we get the same type of metric everytime
         assert type(self) == type(metric)
 
-        # make anything a numpy array and 
+        # make anything a numpy array and generate weights
         metric = self.make_numpy(metric)
         result = self.calculate(metric)
 
         for key, value in result.items():
             if isinstance(value, Iterable):
                 self.partial[key].extend(value)
-            else:
+            elif value is not None:
                 self.partial[key].append(value)
 
         return self
+
+    def reduction_function(self):
+        if "weights" in self.partial:
+            metric_mean = np.average(
+                self.partial["metric"], weights=self.partial["weights"]
+            )
+        else:
+            metric_mean = np.mean(self.partial["metric"])
+            
+        return {
+            "mean": metric_mean,
+            # median not weighted
+            "median": np.median(self.partial["metric"]),
+            "min": float(np.min(self.partial["metric"])),
+            "max": float(np.max(self.partial["metric"])),
+        }
 
 
 class TmlMean(TmlMetric):
@@ -97,16 +103,6 @@ class TmlMean(TmlMetric):
             "weights": metric.weights,
         }
 
-    def reduction_function(self):
-        score = {
-            "mean": np.average(self.partial["metric"], weights=self.partial["weights"]),
-            # median not weighted
-            "median": np.median(self.partial["metric"]),
-            "min": np.min(self.partial["metric"]),
-            "max": np.max(self.partial["metric"]),
-        }
-
-        return score
 
 class TMLBinaryAccuracy(TmlMetric):
     def check_requirements(self):
@@ -125,13 +121,19 @@ class TMLBinaryAccuracy(TmlMetric):
             "weights": metric.weights,
         }
 
-    def reduction_function(self):
-        score = {
-            "mean": np.average(self.partial["metric"], weights=self.partial["weights"]),
-            # median not weighted
-            "median": np.median(self.partial["metric"]),
-            "min": np.min(self.partial["metric"]),
-            "max": np.max(self.partial["metric"]),
-        }
+class TMLDice(TmlMetric):
+    def check_requirements(self):
+        assert self.gold_labels is not None
+        assert self.predictions is not None
 
-        return score
+    def calculate(self, metric):
+        tp = (metric.gold_labels > 0.5) * (metric.predictions > 0.5)
+        fp = (metric.gold_labels > 0.5) * (metric.predictions < 0.5)
+        fn = (metric.gold_labels < 0.5) * (metric.predictions > 0.5)
+
+        return {
+            # only count positives
+            # correct for length of answers
+            "metric": 2*tp / np.clip(2*tp + fp + fn, 1, None),
+            "weights": metric.weights,
+        }
