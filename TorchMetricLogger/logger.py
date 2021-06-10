@@ -38,7 +38,7 @@ class TorchMetricLogger:
                         weights = None
 
                     sub_metric = type(metric)(
-                        gold_labels, predictions, values, metric.metric_class, weights=weights
+                        predictions, gold_labels, values, metric.metric_class, weights=weights
                     )
 
                     self.add_metric(group_name + "_" + class_name, sub_metric)
