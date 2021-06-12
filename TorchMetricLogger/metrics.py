@@ -118,11 +118,13 @@ class TMLBinaryAccuracy(TmlMetric):
 
         tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
         tn = np.sum((metric.gold_labels < 0.5) * (metric.predictions < 0.5), axis=dims)
+        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
+        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
 
         return {
             # only count positives
             # correct for length of answers
-            "metric": tp / (tp + tn),
+            "metric": tp + tn / (tp + fp + tn + fn),
             "weights": metric.weights,
         }
 
