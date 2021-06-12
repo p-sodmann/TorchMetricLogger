@@ -124,7 +124,7 @@ class TMLBinaryAccuracy(TmlMetric):
         return {
             # only count positives
             # correct for length of answers
-            "metric": tp + tn / (tp + fp + tn + fn),
+            "metric": (tp + tn) / np.clip(tp + fp + tn + fn, 1, None),
             "weights": metric.weights,
         }
 
