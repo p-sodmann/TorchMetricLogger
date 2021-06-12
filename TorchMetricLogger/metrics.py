@@ -67,8 +67,12 @@ class TmlMetric:
         result = self.calculate(metric)
 
         for key, value in result.items():
+            # this is ugly.
             if isinstance(value, Iterable):
-                self.partial[key].extend(value)
+                if value.ndim > 0:
+                    self.partial[key].extend(value)
+                else:
+                    self.partial[key].append(value)
             elif value is not None:
                 self.partial[key].append(value)
 
@@ -113,14 +117,15 @@ class TMLBinaryAccuracy(TmlMetric):
         dims = tuple(np.arange(1, metric.gold_labels.ndim).tolist())
 
         tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
-        tn = (metric.gold_labels < 0.5) * (metric.predictions < 0.5)
+        tn = np.sum((metric.gold_labels < 0.5) * (metric.predictions < 0.5), axis=dims)
 
         return {
             # only count positives
             # correct for length of answers
-            "metric": (tp + tn),
+            "metric": tp / (tp + tn),
             "weights": metric.weights,
         }
+
 
 class TMLDice(TmlMetric):
     def check_requirements(self):
@@ -138,5 +143,25 @@ class TMLDice(TmlMetric):
             # only count positives
             # correct for length of answers
             "metric": (2*tp) / np.clip(2*tp + fp + fn, 1, None),
+            "weights": metric.weights,
+        }
+
+
+class TMLF1(TmlMetric):
+    def check_requirements(self):
+        assert self.gold_labels is not None
+        assert self.predictions is not None
+
+    def calculate(self, metric):
+        dims = tuple(np.arange(1, metric.gold_labels.ndim).tolist())
+
+        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
+        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
+        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
+
+        return {
+            # only count positives
+            # correct for length of answers
+            "metric": tp / np.clip(tp + (fp + fn) / 2, 1, None),
             "weights": metric.weights,
         }

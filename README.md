@@ -2,18 +2,19 @@
 Small class to log metrics during training
 
 ``` python
-from torchmetriclogger import TorchMetricLogger
+from TorchMetricLogger import TorchMetricLogger as TML
+from TorchMetricLogger import TMLMean, TMLDice, TMLF1
 
 # create a new log instance, you can also provide a log_function, 
 # that receives a dictionary of metrics per epoch
 
-metric_logger = TorchMetricLogger()
+metric_logger = TML()
 
 def binary_accuracy(label, prediction):
   prediction = torch.float(prediction > 0.5)
   return torch.sum(label == prediction)
 
-criterion = torch.nn.BCELoss()
+criterion = torch.nn.BCEWithLogitsLoss()
 
 for epoch in range(100):
     ## TRAINING LOOP
@@ -24,17 +25,23 @@ for epoch in range(100):
     for i, sample in tqdm(enumerate(train_loader), total=len(train_loader), leave=False, mininterval=1):
         optimizer.zero_grad()
         
-        output = model(sample["x"])
+        output_y = model(sample["x"])
         
         loss = criterion(output_y, sample["y"])
                 
         loss.backward()
         optimizer.step()
                 
-        metric_logger(partial=True, 
-                    train_bin_accuracy=(sample["y"], output_y, ["Class_one", "Class_two", "Class_three", "Class_four"], binary_accuracy), 
-                    train_loss = ([loss])
-                   )
+        metric_logger( 
+            train_path_accuracy=TMLBinaryAccuracy(
+                output_y.sigmoid(),
+                p,
+                class_names=self.class_names
+            ),
+            train_loss=TmlMean(
+                values=loss
+            )
+        )
     
     ## VALIDATION LOOP
     model.eval()
@@ -46,9 +53,15 @@ for epoch in range(100):
             
             loss = criterion(output_y, sample["y"])
             
-            metric_logger(partial=True, 
-                valid_bin_accuracy=(sample["y"], output_y, ["Class_one", "Class_two", "Class_three", "Class_four"], binary_accuracy), 
-                valid_loss = ([loss])
+            metric_logger( 
+                valid_path_accuracy=TMLBinaryAccuracy(
+                    output_y.sigmoid(),
+                    p,
+                    class_names=self.class_names
+                ),
+                valid_loss=TmlMean(
+                    values=loss
+                )
             )
             
     metric_logger.batch_end()
