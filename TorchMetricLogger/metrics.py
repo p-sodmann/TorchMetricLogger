@@ -46,6 +46,12 @@ class TmlMetric:
 
     def check_requirements(self):
         pass
+    
+    def dims(self, metric):
+        if metric.gold_labels.ndim > 1:
+            return tuple(np.arange(1, metric.gold_labels.ndim).tolist())
+        else:
+            return 0
 
     def reduce(self):
         # calculate the weighted mean
@@ -114,7 +120,7 @@ class TMLBinaryAccuracy(TmlMetric):
         assert self.predictions is not None
 
     def calculate(self, metric):
-        dims = tuple(np.arange(1, metric.gold_labels.ndim).tolist())
+        dims = self.dims(metric)
 
         tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
         tn = np.sum((metric.gold_labels < 0.5) * (metric.predictions < 0.5), axis=dims)
@@ -135,17 +141,38 @@ class TMLDice(TmlMetric):
         assert self.predictions is not None
 
     def calculate(self, metric):
-        dims = tuple(np.arange(1, metric.gold_labels.ndim).tolist())
+        dims = self.dims(metric)
 
-        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
-        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
-        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
+        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5) * metric.weights, axis=dims)
+        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5) * metric.weights, axis=dims)
+        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5) * metric.weights, axis=dims)
 
         return {
             # only count positives
             # correct for length of answers
+            "tps": tp,
+            "fps": fp,
+            "fns": fn,
             "metric": (2*tp) / np.clip(2*tp + fp + fn, 1, None),
             "weights": metric.weights,
+        }
+
+    def reduction_function(self):
+        tp = np.sum(self.partial["tps"])
+        fp = np.sum(self.partial["fps"])
+        fn = np.sum(self.partial["fns"])
+
+        if "weights" in self.partial:
+            macro_dice = np.average(
+                self.partial["metric"], weights=self.partial["weights"]
+            )
+        else:
+            macro_dice = np.mean(self.partial["metric"])
+
+        return {
+            "macro": macro_dice,
+            # median not weighted
+            "micro": (2*tp) / np.clip(2*tp + fp + fn, 1, None)
         }
 
 
@@ -155,7 +182,8 @@ class TMLF1(TmlMetric):
         assert self.predictions is not None
 
     def calculate(self, metric):
-        dims = tuple(np.arange(1, metric.gold_labels.ndim).tolist())
+        # in case this is one dim array
+        dims = self.dims(metric)
 
         tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
         fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
