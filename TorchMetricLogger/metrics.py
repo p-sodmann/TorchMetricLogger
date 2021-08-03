@@ -143,10 +143,10 @@ class TMLDice(TmlMetric):
     def calculate(self, metric):
         dims = self.dims(metric)
 
-        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5) * metric.weights, axis=dims)
-        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5) * metric.weights, axis=dims)
-        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5) * metric.weights, axis=dims)
-
+        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
+        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
+        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
+        
         return {
             # only count positives
             # correct for length of answers
@@ -166,7 +166,7 @@ class TMLDice(TmlMetric):
             macro_dice = np.average(
                 self.partial["metric"], weights=self.partial["weights"]
             )
-        else:
+        else:                           
             macro_dice = np.mean(self.partial["metric"])
 
         return {
@@ -192,6 +192,32 @@ class TMLF1(TmlMetric):
         return {
             # only count positives
             # correct for length of answers
+            "tps": tp,
+            "fps": fp,
+            "fns": fn,
             "metric": tp / np.clip(tp + (fp + fn) / 2, 1, None),
             "weights": metric.weights,
+        }
+
+    def reduction_function(self):
+        tp = np.sum(self.partial["tps"])
+        fp = np.sum(self.partial["fps"])
+        fn = np.sum(self.partial["fns"])
+
+        precision = tp / np.clip(tp + fp, a_min=1, a_max=None)
+        recall = tp / np.clip(tp + fn, a_min=1, a_max=None)
+
+        if "weights" in self.partial:
+            macro_dice = np.average(
+                self.partial["metric"], weights=self.partial["weights"]
+            )
+        else:                           
+            macro_dice = np.mean(self.partial["metric"])
+
+        return {
+            "macro": macro_dice,
+            "precision": precision,
+            "recall": recall,
+            # median not weighted
+            "micro": (2*tp) / np.clip(2*tp + fp + fn, 1, None)
         }
