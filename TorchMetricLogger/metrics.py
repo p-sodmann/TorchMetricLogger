@@ -219,5 +219,8 @@ class TMLF1(TmlMetric):
             "precision": precision,
             "recall": recall,
             # median not weighted
-            "micro": (2*tp) / np.clip(2*tp + fp + fn, 1, None)
+            "micro": (2*tp) / np.clip(2*tp + fp + fn, 1, None),
+            "tp": tp,
+            "fp": fp,
+            "fn": fn
         }
