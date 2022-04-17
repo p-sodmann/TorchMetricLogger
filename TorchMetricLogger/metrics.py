@@ -95,9 +95,9 @@ class TmlMetric:
         return {
             "mean": metric_mean,
             # median not weighted
-            "median": np.median(self.partial["metric"]),
-            "min": float(np.min(self.partial["metric"])),
-            "max": float(np.max(self.partial["metric"])),
+            #"median": np.median(self.partial["metric"]),
+            #"min": float(np.min(self.partial["metric"])),
+            #"max": float(np.max(self.partial["metric"])),
         }
 
 
@@ -185,9 +185,9 @@ class TMLF1(TmlMetric):
         # in case this is one dim array
         dims = self.dims(metric)
 
-        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
-        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
-        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
+        tp = (metric.gold_labels > 0.5) * (metric.predictions > 0.5)
+        fp = (metric.gold_labels < 0.5) * (metric.predictions > 0.5)
+        fn = (metric.gold_labels > 0.5) * (metric.predictions < 0.5)
 
         return {
             # only count positives
@@ -195,32 +195,34 @@ class TMLF1(TmlMetric):
             "tps": tp,
             "fps": fp,
             "fns": fn,
-            "metric": tp / np.clip(tp + (fp + fn) / 2, 1, None),
+            #"metric": tp / np.clip(tp + (fp + fn) / 2, 1, None),
             "weights": metric.weights,
         }
 
     def reduction_function(self):
-        tp = np.sum(self.partial["tps"])
-        fp = np.sum(self.partial["fps"])
-        fn = np.sum(self.partial["fns"])
+        tp = np.array(self.partial["tps"])
+        fp = np.array(self.partial["fps"])
+        fn = np.array(self.partial["fns"])
 
-        precision = tp / np.clip(tp + fp, a_min=1, a_max=None)
-        recall = tp / np.clip(tp + fn, a_min=1, a_max=None)
+        precision = tp.sum() / np.clip(tp.sum() + fp.sum(), a_min=1, a_max=None)
+        recall = tp.sum() / np.clip(tp.sum() + fn.sum(), a_min=1, a_max=None)
 
         if "weights" in self.partial:
             macro_dice = np.average(
-                self.partial["metric"], weights=self.partial["weights"]
+                (2*tp.sum(axis=0)) / np.clip(2*tp.sum(axis=0) + fp.sum(axis=0) + fn.sum(axis=0), 1, None), weights=self.partial["weights"]
             )
-        else:                           
-            macro_dice = np.mean(self.partial["metric"])
+        else:
+            macro_dice = np.mean(
+                (2*tp.sum(axis=0)) / np.clip(2*tp.sum(axis=0) + fp.sum(axis=0) + fn.sum(axis=0), 1, None)
+            )
 
         return {
             "macro": macro_dice,
             "precision": precision,
             "recall": recall,
             # median not weighted
-            "micro": (2*tp) / np.clip(2*tp + fp + fn, 1, None),
-            "tp": tp,
-            "fp": fp,
-            "fn": fn
+            "micro": (2*tp.sum()) / np.clip(2*tp.sum() + fp.sum() + fn.sum(), 1, None),
+            "tp": tp.sum(),
+            "fp": fp.sum(),
+            "fn": fn.sum()
         }
