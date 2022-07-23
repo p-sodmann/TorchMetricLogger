@@ -189,6 +189,10 @@ class TMLF1(TmlMetric):
         tp = (metric.gold_labels > 0.5) * (metric.predictions > 0.5)
         fp = (metric.gold_labels < 0.5) * (metric.predictions > 0.5)
         fn = (metric.gold_labels > 0.5) * (metric.predictions < 0.5)
+        
+        s_tp = (metric.gold_labels) * (metric.predictions)
+        s_fp = (1 - metric.gold_labels) * (metric.predictions)
+        s_fn = (metric.gold_labels) * (1 - metric.predictions)
 
         return {
             # only count positives
@@ -196,6 +200,9 @@ class TMLF1(TmlMetric):
             "tps": tp,
             "fps": fp,
             "fns": fn,
+            "s_tps": s_tp,
+            "s_fps": s_fp,
+            "s_fns": s_fn,
             #"metric": tp / np.clip(tp + (fp + fn) / 2, 1, None),
             "weights": metric.weights,
         }
@@ -204,10 +211,17 @@ class TMLF1(TmlMetric):
         tp = np.array(self.partial["tps"])
         fp = np.array(self.partial["fps"])
         fn = np.array(self.partial["fns"])
+        
+        s_tp = np.array(self.partial["s_tps"])
+        s_fp = np.array(self.partial["s_fps"])
+        s_fn = np.array(self.partial["s_fns"])
 
         precision = tp.sum() / np.clip(tp.sum() + fp.sum(), a_min=1, a_max=None)
         recall = tp.sum() / np.clip(tp.sum() + fn.sum(), a_min=1, a_max=None)
-
+        
+        s_precision = s_tp.sum() / np.clip(s_tp.sum() + s_fp.sum(), a_min=1, a_max=None)
+        s_recall = s_tp.sum() / np.clip(s_tp.sum() + s_fn.sum(), a_min=1, a_max=None)
+        
         if "weights" in self.partial:
             macro_dice = np.average(
                 (2*tp.sum(axis=0)) / np.clip(2*tp.sum(axis=0) + fp.sum(axis=0) + fn.sum(axis=0), 1, None), weights=self.partial["weights"]
@@ -223,6 +237,7 @@ class TMLF1(TmlMetric):
             "recall": recall,
             # median not weighted
             "micro": (2*tp.sum()) / np.clip(2*tp.sum() + fp.sum() + fn.sum(), 1, None),
+            "soft_micro": (2*s_tp.sum()) / np.clip(2*s_tp.sum() + s_fp.sum() + s_fn.sum(), 1, None),
             "tp": tp.sum(),
             "fp": fp.sum(),
             "fn": fn.sum()
