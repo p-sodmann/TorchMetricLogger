@@ -153,7 +153,8 @@ class TMLDice(TmlMetric):
             "tps": tp,
             "fps": fp,
             "fns": fn,
-            "metric": (2*tp) / np.clip(2*tp + fp + fn, 1, None),
+            # prevent dice of 0 if mask is empty, also prevent division by zero
+            "metric": np.clip(2*tp, 1, None) / np.clip(2*tp + fp + fn, 1, None),
             "weights": metric.weights,
         }
 
@@ -172,7 +173,7 @@ class TMLDice(TmlMetric):
         return {
             "macro": macro_dice,
             # median not weighted
-            "micro": (2*tp) / np.clip(2*tp + fp + fn, 1, None)
+            "micro": np.clip(2*tp, 1, None) / np.clip(2*tp + fp + fn, 1, None)
         }
 
 
