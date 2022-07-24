@@ -134,7 +134,14 @@ class TMLBinaryAccuracy(TmlMetric):
             "weights": metric.weights,
         }
 
+def calc_precision(tp, fp, fn):
+    precision = tp.sum() / np.clip(tp.sum() + fp.sum(), a_min=1, a_max=None)
+    return precision
 
+def calc_recall(tp, fp, fn)
+    recall = tp.sum() / np.clip(tp.sum() + fn.sum(), a_min=1, a_max=None)
+    return recall
+    
 class TMLDice(TmlMetric):
     def check_requirements(self):
         assert self.gold_labels is not None
@@ -172,6 +179,8 @@ class TMLDice(TmlMetric):
 
         return {
             "macro": macro_dice,
+            "precision": calc_precision(tp, fp, fn),
+            "recall": calc_recall(tp, fp, fn),
             # median not weighted
             "micro": np.clip(2*tp, 1, None) / np.clip(2*tp + fp + fn, 1, None)
         }
@@ -217,8 +226,7 @@ class TMLF1(TmlMetric):
             s_fp = np.array(self.partial["s_fps"])
             s_fn = np.array(self.partial["s_fns"])
 
-            precision = tp.sum() / np.clip(tp.sum() + fp.sum(), a_min=1, a_max=None)
-            recall = tp.sum() / np.clip(tp.sum() + fn.sum(), a_min=1, a_max=None)
+            
 
             s_precision = s_tp.sum() / np.clip(s_tp.sum() + s_fp.sum(), a_min=1, a_max=None)
             s_recall = s_tp.sum() / np.clip(s_tp.sum() + s_fn.sum(), a_min=1, a_max=None)
@@ -234,8 +242,8 @@ class TMLF1(TmlMetric):
 
             return {
                 "macro": macro_dice,
-                "precision": precision,
-                "recall": recall,
+                "precision": calc_precision(tp, fp, fn),
+                "recall": calc_recall(tp, fp, fn),
                 # median not weighted
                 "micro": (2*tp.sum()) / np.clip(2*tp.sum() + fp.sum() + fn.sum(), 1, None),
                 "soft_micro": (2*s_tp.sum()) / np.clip(2*s_tp.sum() + s_fp.sum() + s_fn.sum(), 1, None),
