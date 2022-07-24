@@ -244,6 +244,7 @@ class TMLF1(TmlMetric):
                 "fn": fn.sum()
             }
         except:
+            print("error while calculating ")
             return {
                 "macro": 0,
                 "precision": 0,
