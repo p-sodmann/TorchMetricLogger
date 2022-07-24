@@ -138,7 +138,7 @@ def calc_precision(tp, fp, fn):
     precision = tp.sum() / np.clip(tp.sum() + fp.sum(), a_min=1, a_max=None)
     return precision
 
-def calc_recall(tp, fp, fn)
+def calc_recall(tp, fp, fn):
     recall = tp.sum() / np.clip(tp.sum() + fn.sum(), a_min=1, a_max=None)
     return recall
     
