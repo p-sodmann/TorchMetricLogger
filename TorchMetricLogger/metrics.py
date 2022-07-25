@@ -181,6 +181,9 @@ class TMLDice(TmlMetric):
             "macro": macro_dice,
             "precision": calc_precision(tp, fp, fn),
             "recall": calc_recall(tp, fp, fn),
+            "tps": tp,
+            "fps": fp,
+            "fns": fn,
             # median not weighted
             "micro": np.clip(2*tp, 1, None) / np.clip(2*tp + fp + fn, 1, None)
         }
