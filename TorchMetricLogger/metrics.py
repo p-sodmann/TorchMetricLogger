@@ -23,26 +23,25 @@ class TmlMetric:
 
         # check if all needed parameters are given
         self.check_requirements()
+        self(self)
 
-    def make_numpy(self, metric):
+    def make_numpy(self):
         """Turn pytorch tensors into numpy arrays, if needed. This also deals with missing weights.
 
         Returns:
             [type]: [description]
         """
-        if torch.is_tensor(metric.weights):
-            metric.weights = metric.weights.detach().cpu().numpy()
+        if torch.is_tensor(self.weights):
+            self.weights = self.weights.detach().cpu().numpy()
 
-        if torch.is_tensor(metric.gold_labels):
-            metric.gold_labels = metric.gold_labels.detach().cpu().numpy()
+        if torch.is_tensor(self.gold_labels):
+            self.gold_labels = self.gold_labels.detach().cpu().numpy()
 
-        if torch.is_tensor(metric.values):
-            metric.values = metric.values.detach().cpu().numpy()
+        if torch.is_tensor(self.values):
+            self.values = self.values.detach().cpu().numpy()
 
-        if torch.is_tensor(metric.predictions):
-            metric.predictions = metric.predictions.detach().cpu().numpy()
-
-        return metric
+        if torch.is_tensor(self.predictions):
+            self.predictions = self.predictions.detach().cpu().numpy()
 
     def check_requirements(self):
         pass
@@ -69,7 +68,7 @@ class TmlMetric:
         assert type(self) == type(metric)
 
         # make anything a numpy array and generate weights
-        metric = self.make_numpy(metric)
+        self.make_numpy()
         result = self.calculate(metric)
 
         for key, value in result.items():
@@ -150,9 +149,9 @@ class TMLDice(TmlMetric):
     def calculate(self, metric):
         dims = self.dims(metric)
 
-        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
+        tp = np.sum((metric.gold_labels >= 0.5) * (metric.predictions > 0.5), axis=dims)
         fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
-        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
+        fn = np.sum((metric.gold_labels >= 0.5) * (metric.predictions < 0.5), axis=dims)
         
         return {
             # only count positives
@@ -160,8 +159,7 @@ class TMLDice(TmlMetric):
             "tps": tp,
             "fps": fp,
             "fns": fn,
-            # prevent dice of 0 if mask is empty, also prevent division by zero
-            "metric": np.clip(2*tp, 1, None) / np.clip(2*tp + fp + fn, 1, None),
+            "metric": (2*tp) / (2*tp + fp + fn) if tp.sum() > 0 else np.zeros_like(tp),
             "weights": metric.weights,
         }
 
@@ -185,7 +183,7 @@ class TMLDice(TmlMetric):
             "fps": fp,
             "fns": fn,
             # median not weighted
-            "micro": np.clip(2*tp, 1, None) / np.clip(2*tp + fp + fn, 1, None)
+            "micro": (2*tp) / (2*tp + fp + fn) if tp.sum() > 0 else np.zeros_like(tp),
         }
 
 

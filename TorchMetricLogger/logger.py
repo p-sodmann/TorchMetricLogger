@@ -9,8 +9,8 @@ class TorchMetricLogger:
         # if the metric is not present in our collection, initialize it.
         if group_name not in self.metrics:
             self.metrics[group_name] = metric
-
-        self.metrics[group_name](metric)
+        else:
+            self.metrics[group_name](metric)
 
     def __call__(self, **label_prediction):
         for group_name, metric in label_prediction.items():
