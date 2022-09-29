@@ -159,7 +159,7 @@ class TMLDice(TmlMetric):
             "tps": tp,
             "fps": fp,
             "fns": fn,
-            "metric": (2*tp) / (2*tp + fp + fn) if tp.sum() > 0 else np.zeros_like(tp),
+            "metric": np.nan_to_num((2*tp) / (2*tp + fp + fn), nan=0.0),
             "weights": metric.weights,
         }
 
@@ -183,7 +183,7 @@ class TMLDice(TmlMetric):
             "fps": fp,
             "fns": fn,
             # median not weighted
-            "micro": (2*tp) / (2*tp + fp + fn) if tp.sum() > 0 else np.zeros_like(tp),
+            "metric": np.nan_to_num((2*tp) / (2*tp + fp + fn), nan=0.0),
         }
 
 
