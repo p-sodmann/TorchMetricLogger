@@ -52,6 +52,11 @@ class TorchMetricLogger:
             for name, metric in self.metrics.items()
         }
 
+        # flatten the log output
+        log_output = {
+            name + "_" + key: value for name, metric in log_output.items() for key, value in metric.items()
+        }
+
         if self.log_function is not None:
             self.log_function(log_output)
 

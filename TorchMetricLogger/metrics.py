@@ -183,7 +183,7 @@ class TMLDice(TmlMetric):
             "fps": fp,
             "fns": fn,
             # median not weighted
-            "metric": np.nan_to_num((2*tp) / (2*tp + fp + fn), nan=0.0),
+            "micro": np.nan_to_num((2*tp) / (2*tp + fp + fn), nan=0.0),
         }
 
 
