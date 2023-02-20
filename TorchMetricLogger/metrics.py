@@ -121,10 +121,10 @@ class TMLBinaryAccuracy(TmlMetric):
     def calculate(self, metric):
         dims = self.dims(metric)
 
-        tp = np.sum((metric.gold_labels > 0.5) * (metric.predictions > 0.5), axis=dims)
+        tp = np.sum((metric.gold_labels >= 0.5) * (metric.predictions >= 0.5), axis=dims)
         tn = np.sum((metric.gold_labels < 0.5) * (metric.predictions < 0.5), axis=dims)
-        fn = np.sum((metric.gold_labels > 0.5) * (metric.predictions < 0.5), axis=dims)
-        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
+        fn = np.sum((metric.gold_labels >= 0.5) * (metric.predictions < 0.5), axis=dims)
+        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions >= 0.5), axis=dims)
 
         return {
             # only count positives
@@ -149,8 +149,8 @@ class TMLDice(TmlMetric):
     def calculate(self, metric):
         dims = self.dims(metric)
 
-        tp = np.sum((metric.gold_labels >= 0.5) * (metric.predictions > 0.5), axis=dims)
-        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions > 0.5), axis=dims)
+        tp = np.sum((metric.gold_labels >= 0.5) * (metric.predictions >= 0.5), axis=dims)
+        fp = np.sum((metric.gold_labels < 0.5) * (metric.predictions >= 0.5), axis=dims)
         fn = np.sum((metric.gold_labels >= 0.5) * (metric.predictions < 0.5), axis=dims)
         
         return {
@@ -226,8 +226,6 @@ class TMLF1(TmlMetric):
             s_tp = np.array(self.partial["s_tps"])
             s_fp = np.array(self.partial["s_fps"])
             s_fn = np.array(self.partial["s_fns"])
-
-            
 
             s_precision = s_tp.sum() / np.clip(s_tp.sum() + s_fp.sum(), a_min=1, a_max=None)
             s_recall = s_tp.sum() / np.clip(s_tp.sum() + s_fn.sum(), a_min=1, a_max=None)
