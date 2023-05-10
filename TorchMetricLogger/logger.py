@@ -53,7 +53,10 @@ class TorchMetricLogger:
             for name, metric in self.metrics.items()
         }
 
-        log_output = {"epoch_tml": self.epoch, **log_output}
+        # flatten the log output
+        log_output = {
+            name + "_" + key: value for name, metric in log_output.items() for key, value in metric.items()
+        }
 
         if self.log_function is not None:
             self.log_function(log_output)
