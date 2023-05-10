@@ -196,9 +196,9 @@ class TMLF1(TmlMetric):
         # in case this is one dim array
         dims = self.dims(metric)
 
-        tp = (metric.gold_labels > 0.5) * (metric.predictions > 0.5)
-        fp = (metric.gold_labels < 0.5) * (metric.predictions > 0.5)
-        fn = (metric.gold_labels > 0.5) * (metric.predictions < 0.5)
+        tp = (metric.gold_labels >= 0.5) * (metric.predictions >= 0.5)
+        fp = (metric.gold_labels < 0.5) * (metric.predictions >= 0.5)
+        fn = (metric.gold_labels >= 0.5) * (metric.predictions < 0.5)
         
         s_tp = (metric.gold_labels) * (metric.predictions)
         s_fp = (1 - metric.gold_labels) * (metric.predictions)

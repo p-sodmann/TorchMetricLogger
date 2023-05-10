@@ -4,6 +4,7 @@ class TorchMetricLogger:
     def __init__(self, log_function=None):
         self.metrics = {}
         self.log_function = log_function
+        self.epoch = 0
 
     def add_metric(self, group_name, metric):
         # if the metric is not present in our collection, initialize it.
@@ -52,7 +53,11 @@ class TorchMetricLogger:
             for name, metric in self.metrics.items()
         }
 
+        log_output = {"epoch_tml": self.epoch, **log_output}
+
         if self.log_function is not None:
             self.log_function(log_output)
+
+        self.epoch += 1
 
         return log_output
