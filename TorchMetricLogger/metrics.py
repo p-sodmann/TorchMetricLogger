@@ -14,6 +14,8 @@ class TmlMetric:
     metric_class: Any = None
     class_names: Any = None
     weights: Any = None
+    is_metric: bool = True
+    log_function: Any = None
 
     def __post_init__(self):
         """This generates a partial dictionary for current runs, as well as a history object.
@@ -99,6 +101,11 @@ class TmlMetric:
             #"max": float(np.max(self.partial["metric"])),
         }
 
+class TmlPlot(TmlMetric):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_metric = False
+        self.called_log_function = kwargs.get("log_function", None)
 
 class TmlMean(TmlMetric):
     def check_requirements(self):
@@ -113,7 +120,7 @@ class TmlMean(TmlMetric):
         }
 
 
-class TMLBinaryAccuracy(TmlMetric):
+class TmlBinaryAccuracy(TmlMetric):
     def check_requirements(self):
         assert self.gold_labels is not None
         assert self.predictions is not None
@@ -141,7 +148,7 @@ def calc_recall(tp, fp, fn):
     recall = tp.sum() / np.clip(tp.sum() + fn.sum(), a_min=1, a_max=None)
     return recall
     
-class TMLDice(TmlMetric):
+class TmlDice(TmlMetric):
     def check_requirements(self):
         assert self.gold_labels is not None
         assert self.predictions is not None
@@ -187,7 +194,7 @@ class TMLDice(TmlMetric):
         }
 
 
-class TMLF1(TmlMetric):
+class TmlF1(TmlMetric):
     def check_requirements(self):
         assert self.gold_labels is not None
         assert self.predictions is not None
@@ -263,3 +270,44 @@ class TMLF1(TmlMetric):
                 "fp": 0,
                 "fn": 0
             }
+
+
+class TmlHistogram(TmlPlot):
+    """
+    this creates a small table, which is used for plotting.
+    for each positive and negative label, create a list of predictions.
+    this will be plotted as two different histograms, when the epoch finishes.
+    """
+
+    def calculate(self, metric):
+        """
+            get the predictions for each label, as well as the labels
+        """
+        return {
+            "gold_labels": metric.gold_labels,
+            "predictions": metric.predictions,
+            "weights": metric.weights,
+        }
+    
+    def reduction_function(self):
+        """
+        create a dictionary with {label_pos: [], label_neg: []}
+        """
+        print("reduce histogram")
+        result_dict = {}
+
+        preds = np.array(self.partial["predictions"])
+        labels = np.array(self.partial["gold_labels"])
+
+        for i, class_name in enumerate(self.class_names):
+            result_dict[f"{class_name}_pos"] = [p for l, p in zip(labels[:, i], preds[:,i]) if l >= 0.5]
+            result_dict[f"{class_name}_neg"] = [p for l, p in zip(labels[:, i], preds[:,i]) if l < 0.5]
+        
+        self.result_dict = result_dict
+
+        return result_dict
+    
+    def metric_log_function(self):
+        return self.called_log_function(self.result_dict)
+
+        

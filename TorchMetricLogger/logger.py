@@ -22,7 +22,7 @@ class TorchMetricLogger:
             self.add_metric(group_name, metric)
 
             # then add a score for each individual class
-            if metric.class_names != None:
+            if metric.class_names != None and metric.is_metric:
                 for index, class_name in enumerate(metric.class_names):
                     gold_labels = None if metric.gold_labels is None else metric.gold_labels[:, index]
                     predictions = None if metric.predictions is None else metric.predictions[:, index]
@@ -62,5 +62,13 @@ class TorchMetricLogger:
             self.log_function(log_output)
 
         self.epoch += 1
+
+        for metric in self.metrics.values():
+            # assume its type is a plot FIXME
+            if not metric.is_metric:
+                if self.log_function is not None:
+                    self.log_function(metric.metric_log_function())
+                else:
+                    print("No log function provided for metric: " + metric.name + ".")
 
         return log_output
