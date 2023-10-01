@@ -34,16 +34,16 @@ class TmlMetric:
             [type]: [description]
         """
         if torch.is_tensor(self.weights):
-            self.weights = self.weights.detach().cpu().numpy()
+            self.weights = self.weights.float().detach().cpu().numpy()
 
         if torch.is_tensor(self.gold_labels):
-            self.gold_labels = self.gold_labels.detach().cpu().numpy()
+            self.gold_labels = self.gold_labels.float().detach().cpu().numpy()
 
         if torch.is_tensor(self.values):
-            self.values = self.values.detach().cpu().numpy()
+            self.values = self.values.float().detach().cpu().numpy()
 
         if torch.is_tensor(self.predictions):
-            self.predictions = self.predictions.detach().cpu().numpy()
+            self.predictions = self.predictions.float().detach().cpu().numpy()
 
     def check_requirements(self):
         pass
