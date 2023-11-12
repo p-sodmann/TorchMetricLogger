@@ -166,7 +166,7 @@ class TmlDice(TmlMetric):
             "tps": tp,
             "fps": fp,
             "fns": fn,
-            "metric": np.nan_to_num((2*tp) / (2*tp + fp + fn), nan=0.0),
+            "metric": np.nan_to_num((2*tp) / np.clip(2*tp + fp + fn, a_min=1), nan=0.0),
             "weights": metric.weights,
         }
 
